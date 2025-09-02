@@ -77,7 +77,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("com.highfivve:advertising_android:0.0.3")
+    implementation("com.highfivve:advertising_android:0.0.4")
 }
 ```
 
