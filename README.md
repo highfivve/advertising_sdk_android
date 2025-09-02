@@ -66,21 +66,18 @@ and may result in a lack of service or functionality.
 1. Ensure you have `mavenCentral()` or your custom Maven repository (where this SDK is published) in
    your project's root `build.gradle(.kts)` or `settings.gradle(.kts)` file:
 
-```gradle
-//settings.gradle or project's build.gradle 
+```gradle 
 repositories { 
- google()
-mavenCentral()
-// maven { url = uri("your_custom_maven_repo_url") } // If applicable
+    google()
+    mavenCentral()
  }
 ```
 
 2. Add the dependency to your module's `build.gradle(.kts)` file (e.g., `app/build.gradle.kts`):
 
 ```kotlin
-// app/build.gradle.kts
 dependencies {
-    implementation("com.highfivve:advertising_android:0.0.1")
+    implementation("com.highfivve:advertising_android:0.0.2")
 }
 ```
 
@@ -113,9 +110,8 @@ Initialize the `HighfivveAdManager` once, typically in your `Application` class.
 before any ad requests are made.
 
 ```kotlin
-// YourApplication.kt
 import android.app.Application
-import com.highfivve.advertising_android.manager.HighfivveAdManager // Adjust import if needed
+import com.highfivve.advertising_android.manager.HighfivveAdManager
 
 class YourApplication : Application() {
     override fun onCreate() {
@@ -131,7 +127,6 @@ class YourApplication : Application() {
 Remember to register `YourApplication` in your `AndroidManifest.xml`:
 
 ```xml
-
 <application android:name=".YourApplication" ... > </application>
 ```
 
@@ -142,7 +137,6 @@ Use the `HighfivveBannerAdView` custom view to display banner ads in your layout
 **XML Layout:**
 
 ```xml
-
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -159,7 +153,6 @@ Use the `HighfivveBannerAdView` custom view to display banner ads in your layout
 
 **Kotlin/Java Code (in your Activity/Fragment):**
 ```kotlin
-//MyActivity.kt 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.highfivve.advertising_android.ad.banner.HighfivveBannerAdView
@@ -198,7 +191,7 @@ class MyActivity : AppCompatActivity() {
             }
         }
 
-        // Load the ad (if showAd was initially false or you want to reload)
+      // Load the ad 
       bannerAdView.loadAd()
     }
 
@@ -247,11 +240,9 @@ bannerAdView.listener = object : HighfivveBannerAdListener {
 
 ## Supported Ad Networks
 
-- Highfivve Ad Network
 
 ## API Reference (Overview)
 
-(For a full API reference, generate KDoc documentation for your library.)
 
 ## Privacy
 
@@ -265,6 +256,6 @@ bannerAdView.listener = object : HighfivveBannerAdListener {
 
 ## License
 
-This SDK is released under the [Your License Name, e.g., Apache 2.0] License. See
-the [LICENSE](LICENSE) file for more details.
+This SDK is released under the Apache 2.0 License. See
+the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) file for more details.
 
