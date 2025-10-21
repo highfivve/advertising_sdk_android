@@ -77,7 +77,16 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("com.highfivve:advertising_android:0.0.4")
+    implementation("com.highfivve:advertising_android:0.0.5")
+}
+```
+
+2.1 If you need to include specific ad network SDKs, add them as dependencies as well. For example to include InMobi SDK:
+
+```kotlin
+dependencies {
+    ...
+    implementation("com.google.ads.mediation:inmobi:10.8.8.0")
 }
 ```
 
