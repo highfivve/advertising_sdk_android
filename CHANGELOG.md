@@ -4,6 +4,52 @@ All notable changes to the `advertising_android` SDK will be documented in this 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.6] - 2026-07-15
+
+### Added
+
+- GDPR/GPP/CCPA consent support: `HighfivveAdvertising.updateConsent(ConsentInfo)`, `ConsentInfo`,
+  `AdPersonalizationState`, and a new `BLOCKED_BY_CONSENT` ad event fired when an ad request is
+  skipped due to the current consent state.
+- `HighfivveBannerAd` now automatically reloads itself on an interval (client-side, so header
+  bidding runs a fresh auction on every reload). Configurable via `isAutoRefreshEnabled` (default
+  `true`) and `refreshIntervalMillis` (default 30s, coerced to a 10s minimum).
+- `HighfivveInterstitialAd` now automatically preloads the next ad after the current one is
+  dismissed. Configurable via `isAutoReloadEnabled` (default `true`) and `reloadDelayMillis`
+  (default 0 = immediate).
+- `consumer-rules.pro` published alongside the AAR so consuming apps' R8/ProGuard builds keep the
+  kotlinx.serialization-generated serializers this SDK needs at runtime.
+
+### Changed
+
+- `com.google.android.gms:play-services-ads` is now declared as an `api` dependency instead of
+  `implementation`, since its types (`AdManagerBannerView`, `AdSize`, etc.) are exposed on this
+  SDK's own public API - consumers no longer need to guess/redeclare a compatible version
+  themselves.
+- `compileSdk` bumped to 36 (from 34). API 37 was tried but isn't buildable with our current
+  Android Gradle Plugin (8.1.4): its platform SDK package uses a newer repository schema that this
+  AGP version's bundled parser can't read (`Failed to find Platform SDK with path:
+  platforms;android-37`, plus `package.xml parsing problem... unexpected element "abis"`) - needs
+  an AGP upgrade first.
+
+### Removed
+
+- Unused `com.google.android.exoplayer:*` and `com.google.code.gson:gson` dependencies (neither was
+  referenced anywhere in this SDK's source).
+
+### Fixed
+
+- `HighfivveBannerAd`: the Prebid-won creative size wasn't being reported to listeners - it computed
+  the corrected size but notified `onLoadedAdSizeChanged` beforehand with the wrong (default GAM)
+  size, so anything sizing itself off that callback (e.g. the Flutter plugin's banner widget) never
+  saw the real ad size.
+- `isLoading` on `HighfivveBannerAd`/`HighfivveInterstitialAd` no longer gets stuck `true` forever
+  after an `AD_NOT_FOUND` event.
+- `HighfivveInterstitialAd` now registers a `FullScreenContentCallback` - previously no callback was
+  registered at all, so `AD_OPENED`, `AD_IMPRESSION`, `AD_CLICKED`, and `AD_CLOSED` events never
+  fired for interstitials.
+
 ## [0.0.5] - 2025-10-21
 
 ### Changed
