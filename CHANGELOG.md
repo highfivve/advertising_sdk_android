@@ -5,6 +5,52 @@ All notable changes to the `advertising_android` SDK will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-08-25
+
+### Added
+
+- Audit/debug mode: `HighfivveAdvertising.setAuditModeEnabled(Boolean)` swaps banner/interstitial
+  ad requests to Google's public test ad unit IDs and enables Prebid Server debug echo + verbose
+  Prebid SDK logging. `HighfivveAdvertising.getDebugSnapshot()` reports the SDK's actual internal
+  state for QA/publisher diagnostics: config-fetch outcome/source/timestamp (new - previously
+  computed transiently and discarded), the raw `app-config.json` last received, active
+  header-bidding SDKs, the current consent snapshot, and a bounded log of recent ad lifecycle
+  events (new - `HighfivveBannerAd`/`HighfivveInterstitialAd` record every event regardless of
+  whether a listener is assigned, so this is visible without wiring one up first).
+  `HighfivveAdvertising.openAdInspector()` wraps Google's native `MobileAds.openAdInspector(...)`;
+  `setTestDeviceIds(List<String>)` registers this device as a Google Mobile Ads test device for
+  physical-device testing.
+- `HighfivveDebugAuditActivity`: a ready-to-use, self-contained audit/debug screen for native
+  (non-Flutter) consumers of this SDK, showing everything `getDebugSnapshot()` exposes plus
+  configured ad slots and the recent-events log. Launch with
+  `HighfivveDebugAuditActivity.start(context)`; registered in this library's manifest so no
+  consumer-side manifest changes are needed. Mirrors the Flutter plugin's
+  `HighfivveDebugAuditView`/`HighfivveDebugAuditPage`.
+
+### Changed
+
+- Migrated from the legacy Google Mobile Ads SDK (`com.google.android.gms:play-services-ads`) to
+  Google's next-gen SDK (`com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk`). Confirmed
+  by decompiling the actual `1.4.0` artifact (not just docs) that Google Ad Manager support carries
+  over closely: `AdManagerAdView`→`AdView`, `AdManagerAdRequest.Builder`→`BannerAdRequest.Builder`/
+  `AdRequest.Builder`, `addCustomTargeting`→`putCustomTargeting`,
+  `addNetworkExtrasBundle(AdMobAdapter::class.java, ...)`→
+  `putAdSourceExtrasBundle(AdMobAdapter::class.java, ...)` (same bundled `AdMobAdapter` class,
+  same `Bundle` shape - `ConsentManager`'s consent/npa extras logic needed no changes at all).
+  `HighfivveInterstitialAd` uses next-gen's "single load" pattern (not the newer
+  `InterstitialAdPreloader` queue API) to stay a mechanical port of the existing design.
+  `MobileAds.initialize` now takes an `InitializationConfig` requiring the AdMob application ID
+  programmatically; read from the `com.google.android.gms.ads.APPLICATION_ID` manifest meta-data
+  tag consuming apps already declare, so no consumer-facing setup changes.
+- Mediation adapters bumped to their next-gen-native versions:
+  `com.google.ads.mediation:facebook:6.22.0.0` and `com.google.ads.mediation:inmobi:11.4.0.0`
+  (both previously depended on the legacy SDK transitively; confirmed via decompilation that
+  `InMobiConsent.updateGDPRConsent(JSONObject)` keeps the same signature on the new version).
+- One real Kotlin/Java-interop surprise found only by compiling against the real artifact: `BannerAd
+  .getAdSize()` doesn't resolve as the `ad.adSize` property-access sugar from this module (unclear
+  root cause - possibly how this SDK's interfaces are compiled) - calling `ad.getAdSize()` directly
+  works and is what's used in `HighfivveBannerAd`.
+
 ## [0.0.6] - 2026-07-15
 
 ### Added

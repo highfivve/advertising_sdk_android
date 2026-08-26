@@ -41,6 +41,7 @@ and may result in a lack of service or functionality.
   - [4. Displaying a Banner Ad](#4-displaying-a-banner-ad)
   - [5. Handling Banner Ad Events](#5-handling-banner-ad-events)
   - [6. Displaying an Interstitial Ad](#6-displaying-an-interstitial-ad)
+  - [7. Audit / Debug Mode](#7-audit--debug-mode)
 - [Supported Ad Networks](#supported-ad-networks)
 - [API Reference (Overview)](#api-reference-overview)
 - [Privacy](#privacy)
@@ -53,6 +54,8 @@ and may result in a lack of service or functionality.
 - Listener interfaces for ad lifecycle events.
 - Customizable ad loading and display options (via parameters like `position` and `pageType`).
 - Designed for direct use in native Android projects (Kotlin/Java).
+- Built-in audit/debug mode with a ready-made diagnostics screen (see
+  [Audit / Debug Mode](#7-audit--debug-mode)).
 
 ## Requirements
 
@@ -80,18 +83,33 @@ repositories {
 
 ```kotlin
 dependencies {
-  implementation("com.highfivve:advertising_android:0.0.6")
+  implementation("com.highfivve.sdk:advertising:0.0.7")
 }
 ```
 
-2.1 If you need to include specific ad network SDKs, add them as dependencies as well. For example to include InMobi SDK:
+2.1 If you need to include specific ad network SDKs, add them as dependencies as well. This SDK only
+`compileOnly`s the InMobi/Meta mediation adapters, so your app must declare them itself, at the same
+versions this SDK builds against (see `advertising_android/build.gradle` for the versions currently
+in use). Since these adapters transitively pull in the legacy
+`com.google.android.gms:play-services-ads*`
+artifacts - which now duplicate classes already provided by the next-gen
+`com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk` this SDK is built on - exclude them the
+same
+way this SDK's own `build.gradle` does. For example, to include InMobi:
 
 ```kotlin
 dependencies {
     ...
-    implementation("com.google.ads.mediation:inmobi:10.8.8.0")
+    implementation("com.google.ads.mediation:inmobi:11.4.0.0") {
+        exclude(group = "com.google.android.gms", module = "play-services-ads")
+        exclude(group = "com.google.android.gms", module = "play-services-ads-lite")
+        exclude(group = "com.google.android.gms", module = "play-services-ads-api")
+    }
 }
 ```
+
+Apply the same three excludes to `com.google.ads.mediation:facebook:6.22.0.0` if you enable Meta
+mediation instead.
 
 3. Sync your project with Gradle files.
 
@@ -298,6 +316,57 @@ By default, the SDK automatically preloads the next interstitial as soon as the 
 dismissed (`isAutoReloadEnabled = true`, `reloadDelayMillis = 0`) - disable it or add a delay if you
 want more control over when the next ad request happens.
 
+### 7. Audit / Debug Mode
+
+The SDK has a built-in audit/debug mode for diagnosing technical integration problems: whether ad
+slots are correctly configured, whether ad requests are actually being sent, whether consent is
+present, and whether `app-config.json` is loading correctly (with its raw contents). It's intended
+for QA/publisher diagnostics, not end users - gate access to it however you already gate internal
+tooling in your app (a hidden settings row, a debug-build-only menu entry, a shake gesture, ...).
+
+**Fastest path - drop in the ready-made screen:**
+
+```kotlin
+import com.highfivve.advertising_android.debug.HighfivveDebugAuditActivity
+
+HighfivveDebugAuditActivity.start(context)
+```
+
+This launches a self-contained Activity (already registered in this SDK's manifest, so no
+consumer-side manifest changes are needed) showing:
+
+- Audit mode on/off toggle, plus a button to open Google's native **Ad Inspector**.
+- `app-config.json` fetch status (loaded/failed/never fetched, source, timestamp) and its raw
+  contents.
+- Configured ad slots, each marked once an ad event has actually been observed for it.
+- Active header-bidding SDKs.
+- Current consent state.
+- A chronological log of recent ad lifecycle events - recorded regardless of whether an
+  `AdEventListener` is assigned, so it's visible without wiring one up first.
+
+**Or build your own UI** against the same underlying API on `HighfivveAdvertising`:
+
+```kotlin
+// Turn audit mode on/off. When enabled, banner/interstitial requests are swapped to Google's
+// public test ad unit IDs (so real "Test Ad" creatives serve instead of production inventory),
+// and Prebid Server debug echo + verbose Prebid SDK logging are enabled.
+HighfivveAdvertising.getInstance().setAuditModeEnabled(true)
+
+// A snapshot of the SDK's actual internal state - safe to call at any time.
+val snapshot = HighfivveAdvertising.getInstance().getDebugSnapshot()
+// snapshot.configFetchStatus, snapshot.rawConfigJson, snapshot.activeSdks,
+// snapshot.consentSnapshot, snapshot.recentEvents, snapshot.testDeviceId
+
+// Opens Google's native Ad Inspector - a full on-device viewer for real ad requests/responses
+// and the mediation waterfall. Requires this device to be a registered Google Mobile Ads test
+// device; emulators are registered automatically, physical devices need setTestDeviceIds below.
+HighfivveAdvertising.getInstance().openAdInspector { error -> /* non-null if it couldn't open */ }
+
+// Google's SDK only reveals a physical device's test-device ID by logging it to Logcat the first
+// time an (unregistered) ad request is made - call this with that value once you have it.
+HighfivveAdvertising.getInstance().setTestDeviceIds(listOf("YOUR_TEST_DEVICE_ID"))
+```
+
 ## Supported Ad Networks
 
 - **Prebid Mobile** - the SDK's real-time header bidding partner, enabled by default via remote
@@ -310,9 +379,10 @@ want more control over when the next ad request happens.
 ## API Reference (Overview)
 
 Full KDoc-style documentation lives in the source under `src/main/kotlin` - the public entry points
-are `HighfivveAdvertising` (SDK initialization and consent), `HighfivveBannerAd` (banner ads),
-`HighfivveInterstitialAd` (interstitial ads), and the shared `AdEventListener`/`HighfivveAdEvent`
-types. Browse the source on
+are `HighfivveAdvertising` (SDK initialization, consent, and audit/debug mode), `HighfivveBannerAd`
+(banner ads), `HighfivveInterstitialAd` (interstitial ads), `HighfivveDebugAuditActivity`
+(ready-made diagnostics screen), and the shared `AdEventListener`/`HighfivveAdEvent` types. Browse
+the source on
 [GitHub](https://github.com/highfivve/advertising_sdk_android) for full class/method documentation.
 
 ## Privacy
@@ -324,9 +394,9 @@ types. Browse the source on
 - If you enable optional ad network SDKs (InMobi, Meta), ensure you comply with their own data
   safety requirements and declare the relevant data usage in your app's Google Play Data Safety
   section.
-- Requires the `INTERNET` permission (declared by this SDK's manifest) and
-  `com.google.android.gms:play-services-ads` (declared as an `api` dependency, see
-  [Installation](#installation)).
+- Requires the `INTERNET` permission (declared by this SDK's manifest) and Google's next-gen
+  Mobile Ads SDK, `com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk` (declared as an
+  `api` dependency, see [Installation](#installation)).
 
 ## License
 
