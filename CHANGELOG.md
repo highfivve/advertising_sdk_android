@@ -5,6 +5,29 @@ All notable changes to the `advertising_android` SDK will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2026-09-28
+
+### Fixed
+
+- A real, high-impact bug from the 0.0.7 next-gen SDK migration: Google's own ad request never
+  received the user's consent/personalization decision. `ConsentManager`'s `npa`/`gdpr` extras
+  were (and still are) correctly forwarded to Prebid/InMobi via `HeaderBiddingSdk
+  .onConsentUpdated`, but neither `HighfivveBannerAd` nor `HighfivveInterstitialAd` ever applied
+  that signal to Google's own `BannerAdRequest`/`AdRequest` - the next-gen SDK has no per-request
+  consent API (unlike the legacy SDK's `addNetworkExtrasBundle`), only the global
+  `MobileAds.setRequestConfiguration(...)`, and nothing ever called it with a consent-derived
+  value. In Google Ad Manager reporting terms this meant the AdID was reported "Missing" (no
+  identifier attached at all) rather than "Active"/"Restricted", on effectively every Android ad
+  request regardless of the user's actual consent choice - not just the ones from users who
+  declined tracking. `HighfivveAdvertising.updateConsent(...)` now also calls a new
+  `applyRequestConfiguration()`, which sets
+  `RequestConfiguration.PublisherPrivacyPersonalizationState`
+  from the same `ConsentManager.shouldRequestNonPersonalizedOnly()` signal already used for the
+  Prebid/InMobi path. `setTestDeviceIds(...)` now goes through the same function instead of
+  building its own `RequestConfiguration` from scratch, since `MobileAds.setRequestConfiguration`
+  replaces the whole configuration object rather than merging into it - the two call sites would
+  otherwise silently clobber each other's setting.
+
 ## [0.0.7] - 2026-08-25
 
 ### Added
